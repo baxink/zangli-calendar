@@ -1,0 +1,11 @@
+{
+  "1": { "name": "等持如来", "multiplier": 100, "short": "等持如来日", "every_month": false },
+  "8": { "name": "药师如来", "multiplier": 1000, "short": "药师如来日", "every_month": true },
+  "10": { "name": "莲花生大师", "multiplier": 100000, "short": "莲师日", "every_month": true },
+  "11": { "name": "贤劫千佛", "multiplier": 100000, "short": "贤劫千佛日", "every_month": false },
+  "15": { "name": "阿弥陀佛", "multiplier": 10000000, "short": "阿弥陀佛日", "every_month": true },
+  "18": { "name": "观世音菩萨", "multiplier": 1000000, "short": "观世音菩萨日", "every_month": false },
+  "21": { "name": "地藏菩萨", "multiplier": 100000000, "short": "地藏菩萨日", "every_month": false },
+  "25": { "name": "金刚亥母等十万空行荟供日", "multiplier": 100000, "short": "空行荟供日", "every_month": true },
+  "30": { "name": "释迦牟尼佛", "multiplier": 900000000, "short": "释迦牟尼佛日", "every_month": true }
+}

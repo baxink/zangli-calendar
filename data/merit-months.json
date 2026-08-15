@@ -1,0 +1,8 @@
+{
+  "1": { "name": "神变月", "multiplier": 100, "commemoration": "纪念释迦牟尼佛以神变降伏外道" },
+  "2": { "name": "苦行月", "multiplier": 1000, "commemoration": "纪念释迦牟尼佛诞生" },
+  "3": { "name": "具香月", "multiplier": 10000, "commemoration": "纪念吉祥时轮法会" },
+  "4": { "name": "遍见月", "multiplier": 100000000000, "commemoration": "纪念释迦牟尼佛入胎、成道、涅槃" },
+  "6": { "name": "明净月", "multiplier": 10000000, "commemoration": "纪念释迦牟尼佛为五比丘初传法轮" },
+  "9": { "name": "游戏月", "multiplier": 1000000000, "commemoration": "说明页九月无纪念句" }
+}

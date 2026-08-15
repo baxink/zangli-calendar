@@ -1,0 +1,68 @@
+name: generate-calendar
+
+on:
+  workflow_dispatch:
+    inputs:
+      year:
+        description: 公历年（留空则用当前年）
+        required: false
+        default: ''
+  schedule:
+    - cron: '0 0 1 1 *'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      TZ: Asia/Shanghai
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run tests
+        run: npm test
+
+      - name: Generate calendar
+        run: |
+          if [ -n "${{ inputs.year }}" ]; then
+            node scripts/generate.js --year "${{ inputs.year }}"
+          else
+            node scripts/generate.js
+          fi
+
+      - name: Commit public/
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: regenerate calendar"
+            git push
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

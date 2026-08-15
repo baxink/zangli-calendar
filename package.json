@@ -1,0 +1,11 @@
+{
+  "name": "zangli-calendar",
+  "version": "1.0.0",
+  "private": true,
+  "description": "可公开订阅的藏历日历，按公历年生成 ICS。",
+  "scripts": {
+    "test": "node --test",
+    "generate": "node scripts/generate.js"
+  },
+  "license": "MIT"
+}
