@@ -16,6 +16,9 @@ if (!fs.existsSync(ZANGLI_PATH)) {
   throw new Error(`缺失 vendor/zangli/zangli.js：${ZANGLI_PATH}`);
 }
 const zangliSrc = fs.readFileSync(ZANGLI_PATH, 'utf8');
+// 注：vm 仅用于隔离 zangli.js 的 `var` 全局变量、避免污染本模块命名空间，
+// 它并不是安全边界（上下文仍共享默认对象原型）。zangli.js 是固定 vendored、
+// 来源已审阅的 MIT 文件，不属于运行时外部输入。
 const zangliSandbox = { console, Date };
 vm.createContext(zangliSandbox);
 vm.runInContext(zangliSrc, zangliSandbox, { filename: 'zangli.js' });
@@ -187,7 +190,7 @@ function shortWord(dayNum, monthNum) {
     return null;
   }
   const inMeritMonth = Boolean(meritMonths[String(monthNum)]);
-  if (md.every_month || inMeritMonth) {
+  if (md.scope === 'monthly' || (md.scope === 'merit-months' && inMeritMonth)) {
     return md.short;
   }
   return null;
@@ -205,14 +208,21 @@ function missingDayNotice(z, nextDate) {
   if (!next.year || !next.month || !next.day) {
     return null;
   }
-  if (z.year !== next.year || z.month !== next.month) {
-    return null;
-  }
   const today = dayToNumber(z.day);
   const tomorrow = dayToNumber(next.day);
-  if (tomorrow >= today + 2) {
+  const sameMonth = z.year === next.year && z.month === next.month;
+
+  // 月中缺日：相邻两天同属一个藏历年、月，且日序跳号。
+  if (sameMonth && tomorrow >= today + 2) {
     return `本日之后缺${dayNumberToCn(today + 1)}，守戒可提前于本日`;
   }
+
+  // 月末缺日：本月最后一天为廿九（或闰廿九），次日进下月 → 缺「三十」。
+  // zangli.js 数据里负号表示缺日，月份止于廿九即表示三十被缺掉。
+  if (!sameMonth && today === 29) {
+    return `本日之后缺${dayNumberToCn(30)}，守戒可提前于本日`;
+  }
+
   return null;
 }
 

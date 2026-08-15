@@ -58,8 +58,11 @@ function parseYear(argv) {
       year = parsed;
     }
   }
-  if (year < 1951 || year > 2050) {
-    throw new Error(`--year 必须在 1951–2050 之间（zangli.js 可转换区间）`);
+  if (year < 1952 || year > 2050) {
+    throw new Error(
+      `--year 必须在 1952–2050 之间（zangli.js 整年可转换区间；` +
+        `1951 年 1 月 1–7 日在起算日 1951-01-08 之前）`
+    );
   }
   return year;
 }

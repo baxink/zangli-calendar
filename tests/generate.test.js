@@ -27,3 +27,16 @@ test('闰年天数与条数一致', () => {
   const result = generateYear(2028, { now: new Date('2026-08-15T00:00:00Z') });
   assert.equal(result.events.length, 366);
 });
+
+test('1951 无法整年生成（起算日之前）', () => {
+  assert.throws(() => generateYear(1951, { now: new Date('2026-01-01T00:00:00Z') }));
+});
+
+test('2050 仍可整年生成', () => {
+  const result = generateYear(2050, { now: new Date('2026-01-01T00:00:00Z') });
+  assert.equal(result.events.length, 365);
+});
+
+test('2051 超出整年可转换区间', () => {
+  assert.throws(() => generateYear(2051, { now: new Date('2026-01-01T00:00:00Z') }));
+});

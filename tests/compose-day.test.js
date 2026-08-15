@@ -126,3 +126,9 @@ test('时区：2026-02-17 命中日环食', () => {
   assert.ok(r.title.includes('日环食'));
   assert.ok(r.description.includes('食甚20点13分'));
 });
+
+test('月末缺日：缺三十（1995-12-21 廿九）', () => {
+  const r = compose('1995-12-21');
+  assert.ok(r.title.includes('藏历木猪年10月廿九'));
+  assert.ok(r.description.includes('本日之后缺三十，守戒可提前于本日'));
+});
