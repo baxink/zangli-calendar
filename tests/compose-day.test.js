@@ -56,6 +56,8 @@ test('2026-03-03 月全食，保留食甚', () => {
   const r = compose('2026-03-03');
   assert.ok(r.title.includes('月全食'));
   assert.ok(r.description.includes('初亏17点49分，复圆21点17分，食甚19点34分'));
+  assert.ok(r.title.includes('神变节'));
+  assert.ok(r.description.includes('四大节日及日食月食日'));
 });
 
 test('2026-08-27 闰日', () => {
@@ -85,12 +87,18 @@ test('2026-09-10 九凶同聚', () => {
   assert.ok(compose('2026-09-10').title.includes('九凶同聚'));
 });
 
-test('2026-02-18 神变节＋功德倍增，无等持如来日', () => {
+test('2026 正月初一神变节开始，十五为当天，整月为神变月', () => {
   const r = compose('2026-02-18');
-  assert.ok(r.title.includes('神变节'));
+  assert.ok(r.title.split('　').includes('神变节开始'));
+  assert.ok(!r.title.split('　').includes('神变节'));
+  assert.ok(r.description.includes('神变月（藏历正月全月'));
+  assert.ok(compose('2026-03-03').title.split('　').includes('神变节'));
+  assert.ok(!compose('2026-03-03').title.includes('神变节开始'));
+  assert.ok(compose('2026-03-18').description.includes('神变月（藏历正月全月'));
+  assert.ok(!compose('2026-03-19').description.includes('神变月（藏历正月全月'));
   assert.ok(r.title.includes('功德倍增'));
-  assert.ok(!r.title.includes('等持如来日'));
-  assert.ok(r.description.includes('四大节日行持善法功德呈十亿倍增上'));
+  assert.ok(r.title.includes('等持如来日'));
+  assert.ok(!r.description.includes('四大节日'));
   assert.ok(r.description.includes('神变月100倍×等持如来100倍'));
 });
 
@@ -109,11 +117,41 @@ test('2026-05-31 成道日涅槃日＋功德倍增', () => {
   assert.ok(r.description.includes('遍见月1000亿倍×阿弥陀佛1000万倍'));
 });
 
-test('2026-10-30 天降日，无功德倍增', () => {
-  const r = compose('2026-10-30');
+test('2026-11-01 九月廿二为天降日，二十不再误标', () => {
+  const r = compose('2026-11-01');
   assert.ok(r.title.includes('释迦牟尼佛天降日'));
   assert.ok(r.description.includes('四大节日行持善法功德呈十亿倍增上'));
   assert.ok(!r.description.includes('功德倍增'));
+  assert.ok(!compose('2026-10-30').title.includes('天降日'));
+});
+
+test('2027 闰二月后，成道日与初转法轮日按本表标准化月日标记', () => {
+  assert.ok(compose('2027-06-18').title.includes('释迦牟尼佛成道日涅槃日'));
+  assert.ok(!compose('2027-05-20').title.includes('成道日涅槃日'));
+  assert.ok(compose('2027-08-06').title.includes('释迦牟尼佛初转法轮日'));
+  assert.ok(!compose('2027-07-07').title.includes('初转法轮日'));
+});
+
+test('2027-09-30 跨月缺初一时，预告写在前一天', () => {
+  assert.ok(compose('2027-09-30').description.includes('本日之后缺初一，守戒可提前于本日'));
+  assert.ok(!compose('2027-10-01').description.includes('缺初一'));
+});
+
+test('2028 正月十五缺日，仅提前预告神变节，不另造十五事件', () => {
+  const r = compose('2028-03-10');
+  assert.ok(r.title.includes('1月十四'));
+  assert.ok(r.description.includes('本日之后缺十五'));
+  assert.ok(r.description.includes('缺日节日预告：神变节'));
+  assert.ok(!r.description.includes('四大节日行持善法'));
+  assert.ok(!compose('2028-03-11').title.includes('神变节'));
+});
+
+test('2027 三次半影月食不再误写成月偏食，UTC 跨日仍归北京时间', () => {
+  for (const s of ['2027-02-21', '2027-07-19', '2027-08-17']) {
+    assert.ok(compose(s).title.includes('半影月食'), s);
+    assert.ok(!compose(s).title.includes('月偏食'), s);
+  }
+  assert.ok(!compose('2027-02-20').title.includes('半影月食'));
 });
 
 test('2026-12-23 缺十五预告', () => {

@@ -1,7 +1,38 @@
 {
   "year": 2026,
-  "event_count": 365,
-  "generated_at": "2026-08-15T11:04:38.575Z",
+  "event_count": 1826,
+  "generated_at": "2026-10-01T05:03:03.492Z",
   "calendar_url": "https://baxink.github.io/zangli-calendar/zangli.ics",
-  "archive_url": "https://baxink.github.io/zangli-calendar/zangli-2026.ics"
+  "archive_url": "https://baxink.github.io/zangli-calendar/zangli-2026.ics",
+  "start_year": 2026,
+  "end_year": 2030,
+  "coverage_start": "2026-01-01",
+  "coverage_end": "2030-12-31",
+  "archives": [
+    {
+      "year": 2026,
+      "event_count": 365,
+      "url": "https://baxink.github.io/zangli-calendar/zangli-2026.ics"
+    },
+    {
+      "year": 2027,
+      "event_count": 365,
+      "url": "https://baxink.github.io/zangli-calendar/zangli-2027.ics"
+    },
+    {
+      "year": 2028,
+      "event_count": 366,
+      "url": "https://baxink.github.io/zangli-calendar/zangli-2028.ics"
+    },
+    {
+      "year": 2029,
+      "event_count": 365,
+      "url": "https://baxink.github.io/zangli-calendar/zangli-2029.ics"
+    },
+    {
+      "year": 2030,
+      "event_count": 365,
+      "url": "https://baxink.github.io/zangli-calendar/zangli-2030.ics"
+    }
+  ]
 }

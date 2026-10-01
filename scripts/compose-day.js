@@ -24,9 +24,17 @@ vm.createContext(zangliSandbox);
 vm.runInContext(zangliSrc, zangliSandbox, { filename: 'zangli.js' });
 
 const getZangli = zangliSandbox.getZangli;
-const getEclipse = zangliSandbox.getEclipse;
-if (typeof getZangli !== 'function' || typeof getEclipse !== 'function') {
+const upstreamGetEclipse = zangliSandbox.getEclipse;
+if (typeof getZangli !== 'function' || typeof upstreamGetEclipse !== 'function') {
   throw new Error('vendor/zangli/zangli.js 加载后未得到 getZangli / getEclipse');
+}
+
+// 上游类型 8 为半影月食。保留其日期与时间，仅更正误标的类型名称。
+function getEclipse(date) {
+  const result = upstreamGetEclipse(date);
+  const record = zangliSandbox.eclipseDate[date.toDateString()];
+  if (record && record[1] === 8) result.value = '半影月食';
+  return result;
 }
 
 // ---- 载入规则数据并校验完整性 ----
@@ -85,16 +93,23 @@ function validateData() {
 validateData();
 
 // ---- 常量 ----
-const FESTIVAL_WHITELIST = [
-  '神变节',
-  '释迦牟尼佛诞辰',
-  '释迦牟尼佛成道日涅槃日',
-  '释迦牟尼佛入胎日',
-  '释迦牟尼佛初转法轮日',
-  '释迦牟尼佛天降日'
-];
+// 使用与标题一致的标准化月序，不信任上游含闰月的数组位置。
+// 四大节日月日依据 FPMT；其余两条沿用原规则，详见 docs/rules-sources.md。
+const FESTIVALS = new Map([
+  ['1-15', '神变节'],
+  ['4-7', '释迦牟尼佛诞辰'],
+  ['4-15', '释迦牟尼佛成道日涅槃日'],
+  ['6-4', '释迦牟尼佛初转法轮日'],
+  ['6-15', '释迦牟尼佛入胎日'],
+  ['9-22', '释迦牟尼佛天降日']
+]);
 
-// 起源「四大节日」适用十亿倍，与上面的专名白名单不是同一集合。
+function festivalForDay(z, monthNum, dayNum) {
+  if (z.dayLeap || z.monthLeap) return '';
+  return FESTIVALS.get(`${monthNum}-${dayNum}`) || '';
+}
+
+// 沿用旧规则的十亿倍文字；此处只包含四大节日，不含诞辰、入胎专名。
 const FOUR_FESTIVALS = [
   '神变节',
   '释迦牟尼佛成道日涅槃日',
@@ -197,33 +212,32 @@ function shortWord(dayNum, monthNum) {
 }
 
 // ---- 缺日预告（标题不放，写在备注第 2 段）----
-function missingDayNotice(z, nextDate) {
-  if (!nextDate) {
-    return null;
-  }
+function missingDays(z, nextDate) {
+  if (!nextDate) return [];
   const next = getZangli(nextDate);
   if (!next || next === 'error' || (next && next.value === 'error')) {
-    return null;
+    return [];
   }
   if (!next.year || !next.month || !next.day) {
-    return null;
+    return [];
   }
   const today = dayToNumber(z.day);
   const tomorrow = dayToNumber(next.day);
   const sameMonth = z.year === next.year && z.month === next.month;
 
-  // 月中缺日：相邻两天同属一个藏历年、月，且日序跳号。
-  if (sameMonth && tomorrow >= today + 2) {
-    return `本日之后缺${dayNumberToCn(today + 1)}，守戒可提前于本日`;
+  const missing = [];
+  if (sameMonth) {
+    for (let day = today + 1; day < tomorrow; day++) missing.push({ z, day });
+  } else {
+    for (let day = today + 1; day <= 30; day++) missing.push({ z, day });
+    for (let day = 1; day < tomorrow; day++) missing.push({ z: next, day });
   }
+  return missing;
+}
 
-  // 月末缺日：本月最后一天为廿九（或闰廿九），次日进下月 → 缺「三十」。
-  // zangli.js 数据里负号表示缺日，月份止于廿九即表示三十被缺掉。
-  if (!sameMonth && today === 29) {
-    return `本日之后缺${dayNumberToCn(30)}，守戒可提前于本日`;
-  }
-
-  return null;
+function missingDayNotice(missing) {
+  if (!missing.length) return null;
+  return `本日之后缺${missing.map(({ day }) => dayNumberToCn(day)).join('、')}，守戒可提前于本日`;
 }
 
 // ---- 组装标题 ----
@@ -238,7 +252,10 @@ function composeTitle(z, monthStr, monthNum, dayNum, eclipse, info) {
   }
 
   if (!z.dayLeap) {
-    if (FESTIVAL_WHITELIST.includes(info)) {
+    if (monthNum === 1 && dayNum === 1 && !z.monthLeap) {
+      parts.push('神变节开始');
+    }
+    if (info) {
       parts.push(info);
     } else {
       const sw = shortWord(dayNum, monthNum);
@@ -266,15 +283,30 @@ function composeTitle(z, monthStr, monthNum, dayNum, eclipse, info) {
 function composeDescription(z, nextDate, monthNum, dayNum, eclipse, info) {
   const parts = [];
 
+  // 神变月为整个藏历正月；初一开始，十五为神变节当天。
+  if (monthNum === 1) {
+    parts.push(z.monthLeap
+      ? '闰神变月（藏历闰正月）'
+      : '神变月（藏历正月全月；初一神变节开始，十五为神变节当天；神变十五日为初一至十五）');
+  }
+
   // 1. 闰日
   if (z.dayLeap) {
     parts.push('闰日（守戒取第一天）');
   }
 
   // 2. 缺日预告
-  const miss = missingDayNotice(z, nextDate);
+  const missing = missingDays(z, nextDate);
+  const miss = missingDayNotice(missing);
   if (miss) {
     parts.push(miss);
+    for (const entry of missing) {
+      const { num: month, leap } = parseMonth(entry.z.month);
+      const festival = festivalForDay({ dayLeap: false, monthLeap: leap }, month, entry.day);
+      if (festival) {
+        parts.push(`缺日节日预告：${festival}（藏历${month}月${dayNumberToCn(entry.day)}）；守戒可提前于本日`);
+      }
+    }
   }
 
   // 3. 交食（有初亏／复圆时食甚在 extraInfo2，别漏掉）
@@ -344,7 +376,7 @@ function composeDay(date, nextDate) {
   const { num: monthNum, str: monthStr } = parseMonth(z.month);
   const dayNum = dayToNumber(z.day);
   const eclipse = getEclipse(date) || { value: '', extraInfo: '', extraInfo2: '' };
-  const info = (z.extraInfo || '').replace(/<br>/g, '');
+  const info = festivalForDay(z, monthNum, dayNum);
 
   const title = composeTitle(z, monthStr, monthNum, dayNum, eclipse, info);
   const description = composeDescription(z, nextDate, monthNum, dayNum, eclipse, info);

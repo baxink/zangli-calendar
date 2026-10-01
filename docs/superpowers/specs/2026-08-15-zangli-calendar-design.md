@@ -1,5 +1,7 @@
 # 藏历日历订阅设计
 
+> 历史设计草案。2026-10-01 已修正节日日期、闰月判定和月初缺日，并扩展为 2026–2030 合并订阅；当前行为以 README.md 与 docs/rules-sources.md 为准，下文的旧日期及年度更新方案不再作为现行规范。
+
 Date: 2026-08-15  
 Status: Draft for user review
 

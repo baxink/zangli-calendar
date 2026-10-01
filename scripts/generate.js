@@ -58,16 +58,46 @@ function parseYear(argv) {
       year = parsed;
     }
   }
-  if (year < 1952 || year > 2050) {
+  validateYear(year);
+  return year;
+}
+
+function validateYear(year) {
+  if (!Number.isInteger(year) || year < 1952 || year > 2050) {
     throw new Error(
       `--year 必须在 1952–2050 之间（zangli.js 整年可转换区间；` +
         `1951 年 1 月 1–7 日在起算日 1951-01-08 之前）`
     );
   }
-  return year;
+}
+
+// --year 仍支持单年；默认与 CI 都生成从 2026 开始的多年份订阅。
+function parseGenerationArgs(argv, now = new Date()) {
+  const values = new Map();
+  const allowed = new Set(['--year', '--from-year', '--to-year']);
+  for (let i = 0; i < argv.length; i += 2) {
+    const key = argv[i];
+    const raw = argv[i + 1];
+    if (!allowed.has(key) || values.has(key)) throw new Error('未知或重复参数: ' + key);
+    const year = Number(raw);
+    if (!Number.isInteger(year) || String(year) !== raw) throw new Error(key + ' 必须是整数');
+    validateYear(year);
+    values.set(key, year);
+  }
+  if (values.has('--year')) {
+    if (values.size !== 1) throw new Error('--year 不能与年份区间混用');
+    return { fromYear: values.get('--year'), toYear: values.get('--year') };
+  }
+  const fromYear = values.get('--from-year') ?? 2026;
+  const toYear = values.get('--to-year') ?? Math.min(2050, Math.max(2030, now.getFullYear() + 1));
+  validateYear(fromYear);
+  validateYear(toYear);
+  if (fromYear > toYear) throw new Error('起始年份不能晚于结束年份');
+  return { fromYear, toYear };
 }
 
 function generateYear(year, options = {}) {
+  validateYear(year);
   const now = options.now || new Date();
   const dtstamp = utcStamp(now);
   const expected = daysInYear(year);
@@ -112,33 +142,65 @@ function generateYear(year, options = {}) {
   return { year, dtstamp, events, ics, status };
 }
 
-function writeOutput(result) {
-  fs.mkdirSync(PUBLIC_DIR, { recursive: true });
-  const year = result.year;
-  const ics = result.ics;
+function generateRange(fromYear, toYear, options = {}) {
+  validateYear(fromYear);
+  validateYear(toYear);
+  if (fromYear > toYear) throw new Error('起始年份不能晚于结束年份');
+  const now = options.now || new Date();
+  const calendars = [];
+  for (let year = fromYear; year <= toYear; year++) {
+    calendars.push(generateYear(year, { now }));
+  }
+  const events = calendars.flatMap(calendar => calendar.events);
+  const dtstamp = utcStamp(now);
+  const status = {
+    ...calendars[0].status,
+    start_year: fromYear,
+    end_year: toYear,
+    coverage_start: fromYear + '-01-01',
+    coverage_end: toYear + '-12-31',
+    event_count: events.length,
+    archives: calendars.map(calendar => ({
+      year: calendar.year,
+      event_count: calendar.events.length,
+      url: calendar.status.archive_url
+    }))
+  };
+  return { fromYear, toYear, dtstamp, calendars, events, ics: buildIcs(events, dtstamp), status };
+}
 
-  fs.writeFileSync(path.join(PUBLIC_DIR, `zangli-${year}.ics`), ics);
-  fs.writeFileSync(path.join(PUBLIC_DIR, 'zangli.ics'), ics);
-  fs.writeFileSync(
-    path.join(PUBLIC_DIR, 'status.json'),
-    JSON.stringify(result.status, null, 2) + '\n'
-  );
+function writeOutput(result, directory = PUBLIC_DIR) {
+  fs.mkdirSync(directory, { recursive: true });
+  // 所有年份先在内存生成成功，再更新产物；稳定地址一次写入完整区间。
+  const files = result.calendars.map(calendar => [
+    'zangli-' + calendar.year + '.ics', calendar.ics
+  ]);
+  files.push(['zangli.ics', result.ics], ['status.json', JSON.stringify(result.status, null, 2) + '\n']);
+  for (const [name, contents] of files) {
+    const destination = path.join(directory, name);
+    const temporary = destination + '.' + process.pid + '.tmp';
+    fs.writeFileSync(temporary, contents);
+    fs.renameSync(temporary, destination);
+  }
 }
 
 function main() {
-  const year = parseYear(process.argv.slice(2));
-  const result = generateYear(year);
+  const { fromYear, toYear } = parseGenerationArgs(process.argv.slice(2));
+  const result = generateRange(fromYear, toYear);
   writeOutput(result);
   process.stdout.write(
-    `已生成 ${result.year} 年日历：${result.events.length} 条事件\n` +
+    `已生成 ${fromYear}–${toYear} 年日历：${result.events.length} 条事件\n` +
       `  public/zangli.ics\n` +
-      `  public/zangli-${result.year}.ics\n` +
+      '  public/zangli-YYYY.ics（逐年存档）\n' +
       `  public/status.json\n`
   );
 }
 
 module.exports = {
   generateYear,
+  generateRange,
+  parseGenerationArgs,
+  writeOutput,
   makeDate,
   parseYear,
   daysInYear

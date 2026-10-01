@@ -3,12 +3,25 @@ name: generate-calendar
 on:
   workflow_dispatch:
     inputs:
-      year:
-        description: 公历年（留空则用当前年）
+      from_year:
+        description: 起始公历年（默认 2026）
+        required: false
+        default: '2026'
+      to_year:
+        description: 结束公历年（留空则至少到 2030，之后提前覆盖下一年）
         required: false
         default: ''
   schedule:
-    - cron: '0 0 1 1 *'
+    # 每月重生成并提交真实产物，避免仅年度运行导致 60 天无活动停用。
+    - cron: '17 0 1 * *'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/**'
+      - 'data/**'
+      - 'vendor/**'
+      - 'tests/**'
+      - '.github/workflows/generate-calendar.yml'
 
 permissions:
   contents: write
@@ -38,12 +51,21 @@ jobs:
         run: npm test
 
       - name: Generate calendar
+        env:
+          FROM_YEAR: ${{ inputs.from_year }}
+          TO_YEAR: ${{ inputs.to_year }}
         run: |
-          if [ -n "${{ inputs.year }}" ]; then
-            node scripts/generate.js --year "${{ inputs.year }}"
-          else
-            node scripts/generate.js
+          args=()
+          if [ -n "$FROM_YEAR" ]; then
+            args+=(--from-year "$FROM_YEAR")
           fi
+          if [ -n "$TO_YEAR" ]; then
+            args+=(--to-year "$TO_YEAR")
+          fi
+          node scripts/generate.js "${args[@]}"
+
+      - name: Verify generated files
+        run: npm run verify
 
       - name: Commit public/
         run: |
